@@ -69,3 +69,7 @@ python main.py
 ```
 
 Требуется Windows 10+, включённый Bluetooth для BT/BLE.
+
+Готовый EXE лежит в Releases. Учтите: Defender может помечать неподписанный
+EXE как `Trojan:Win32/Wacatac.B!ml` — это ложное срабатывание ML-эвристики на
+упаковщик PyInstaller; при сомнениях запускайте из исходников (команды выше).
