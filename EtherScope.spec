@@ -17,6 +17,8 @@ for _mod in ('winrt.windows.devices.bluetooth.genericattributeprofile',
     datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 datas += [('assets/icon.png', 'assets')]
 datas += [('assets/icon.ico', 'assets')]
+datas += [('assets/icon_16.png', 'assets')]
+datas += [('assets/icon_32.png', 'assets')]
 
 
 a = Analysis(

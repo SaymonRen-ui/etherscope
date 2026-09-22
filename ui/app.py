@@ -38,15 +38,19 @@ class ScannerApp(RadioTabMixin, LabTabMixin, ProxyTabMixin, ClipMixin, ctk.CTk):
         self.minsize(1080, 680)
         self.configure(fg_color=BG)
         try:
-            # Иконка окна/таскбара: ресайз из icon.ico через LANCZOS —
-            # прямой PhotoImage(PNG) Tk давит до 16px грязно.
+            # iconbitmap обязателен: CTk отслеживает только его вызов
+            # и иначе затирает иконку своей CustomTkinter_icon_Windows.ico.
+            self.iconbitmap(resource_path("assets", "icon.ico"))
+        except Exception:
+            pass
+        try:
+            # Дополнительно мелкие PNG-слои для чёткости в заголовке.
             from PIL import Image as _PILImage, ImageTk as _PILImageTk
-            with _PILImage.open(resource_path("assets", "icon.ico")) as _src:
-                _src = _src.convert("RGBA")
-                _icons = [
-                    _PILImageTk.PhotoImage(_src.resize((s, s), _PILImage.LANCZOS))
-                    for s in (16, 32)
-                ]
+            _icons = [
+                _PILImageTk.PhotoImage(
+                    _PILImage.open(resource_path("assets", f"icon_{s}.png")))
+                for s in (16, 32)
+            ]
             self.iconphoto(True, *_icons)
             self._icon_ref = _icons
         except Exception:
