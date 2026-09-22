@@ -27,6 +27,10 @@ from .net_utils import (
 
 ERROR_SUCCESS = 0
 
+
+class ScanCancelled(Exception):
+    """Сканирование остановлено пользователем (кнопка Стоп)."""
+
 # ---------------- ctypes-структуры WLAN API ----------------
 
 class GUID(ctypes.Structure):
@@ -306,7 +310,19 @@ def _bss_list_all(api, client, guid: GUID) -> list[dict]:
     return out
 
 
-def _scan_wlanapi(scan_wait: float = 10.0) -> list[dict]:
+def _sleep_chunks(total: float, is_cancelled=None, step: float = 0.5):
+    """Сон кусками: Стоп срабатывает максимум через step секунд."""
+    end = time.time() + max(0.0, total)
+    while True:
+        if is_cancelled is not None and is_cancelled():
+            raise ScanCancelled("остановлено пользователем")
+        now = time.time()
+        if now >= end:
+            return
+        time.sleep(min(step, end - now))
+
+
+def _scan_wlanapi(scan_wait: float = 10.0, is_cancelled=None) -> list[dict]:
     api = _load_wlanapi()
     client = wintypes.HANDLE()
     negotiated = wintypes.DWORD()
@@ -321,10 +337,12 @@ def _scan_wlanapi(scan_wait: float = 10.0) -> list[dict]:
             api.WlanScan(client, ctypes.byref(guid), None, None, None)
         except OSError:
             pass
-        time.sleep(max(3.0, scan_wait))
-        nets = _avail_list(api, client, guid)
-        if not nets:
-            time.sleep(6.0)
+        # Опрашиваем список пока не появится (быстрые машины — 2-3 с),
+        # но не дольше scan_wait
+        nets = []
+        end = time.time() + max(3.0, scan_wait)
+        while not nets and time.time() < end:
+            _sleep_chunks(2.0, is_cancelled)
             nets = _avail_list(api, client, guid)
         rows: dict[str, dict] = {}
         by_ssid = {net["ssid"]: net for net in nets}
@@ -536,9 +554,11 @@ def _parse_networks(text: str) -> list[dict]:
     return networks
 
 
-def _scan_netsh(passes: int = 2, pause_s: float = 3.0) -> list[dict]:
+def _scan_netsh(passes: int = 2, pause_s: float = 3.0, is_cancelled=None) -> list[dict]:
     merged: dict[str, dict] = {}
     for i in range(max(1, passes)):
+        if is_cancelled is not None and is_cancelled():
+            raise ScanCancelled("остановлено пользователем")
         try:
             text = _run_netsh("wlan", "show", "networks", "mode=bssid")
         except Exception:
@@ -554,26 +574,31 @@ def _scan_netsh(passes: int = 2, pause_s: float = 3.0) -> list[dict]:
                                      or cur_sig > prev.get("signal_pct"))):
                 merged[bssid] = row
         if i < passes - 1:
-            time.sleep(max(0.0, pause_s))
+            _sleep_chunks(max(0.0, pause_s), is_cancelled)
     return sorted(merged.values(),
                   key=lambda r: (r.get("signal_pct") is None, -(r.get("signal_pct") or -1)))
 
 
-def scan_wifi(scan_wait: float = 10.0) -> tuple[list[dict], str]:
+def scan_wifi(scan_wait: float = 10.0, is_cancelled=None) -> tuple[list[dict], str]:
     """Сканирование Wi-Fi.
 
     Основной путь — WLAN API с принудительным активным сканом
     (те же данные, что видит штатный список сетей Windows):
     настоящие дБм, частоты, все BSSID.
     При недоступности API — fallback на netsh.
+    is_cancelled() -> bool: Стоп срабатывает в пределах ~0.5 с.
     """
     try:
-        rows = _scan_wlanapi(scan_wait)
+        rows = _scan_wlanapi(scan_wait, is_cancelled)
         if rows:
             return rows, ""
+    except ScanCancelled:
+        raise
     except Exception:
         pass
     try:
-        return _scan_netsh(), "WLAN API недоступен — показан кэш netsh"
+        return _scan_netsh(is_cancelled=is_cancelled), "WLAN API недоступен — показан кэш netsh"
+    except ScanCancelled:
+        raise
     except Exception as e:
         return [], f"Wi-Fi сканирование не удалось: {e}"

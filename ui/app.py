@@ -49,6 +49,9 @@ class ScannerApp(RadioTabMixin, LabTabMixin, ProxyTabMixin, ClipMixin, ctk.CTk):
         self.live_ble: dict[str, dict] = {}
         self.q: queue.Queue = queue.Queue()
         self.scanning = False
+        # Поколение скана: Стоп инвалидирует зависший воркер —
+        # его поздний результат игнорируется
+        self._scan_gen = 0
         self.current_tab = "wifi"
         self.trees: dict[str, ttk.Treeview] = {}
         self.details: dict[str, ctk.CTkTextbox] = {}
@@ -306,6 +309,7 @@ class ScannerApp(RadioTabMixin, LabTabMixin, ProxyTabMixin, ClipMixin, ctk.CTk):
         self.progress.start()
         self.log(f"Сканирование {self.TITLES[key]}…")
         self._stop_flag = False
+        self._scan_gen += 1
         if key == "wifi":
             threading.Thread(target=self._job_wifi, daemon=True).start()
         elif key == "bt":
@@ -315,8 +319,11 @@ class ScannerApp(RadioTabMixin, LabTabMixin, ProxyTabMixin, ClipMixin, ctk.CTk):
             threading.Thread(target=self._job_ble, daemon=True).start()
 
     def stop_scan(self):
+        # Инвалидируем текущее поколение: поздний ответ зависшего
+        # воркера будет проигнорирован
+        self._scan_gen += 1
         self._stop_flag = True
-        self.log("Остановка… (дождитесь завершения текущего прохода)")
+        self._finish("Остановлено пользователем")
 
     def _finish(self, msg: str = ""):
         self.scanning = False

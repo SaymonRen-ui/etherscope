@@ -117,29 +117,50 @@ class RadioTabMixin:
         self.charts[key] = chart
 
     def _job_wifi(self):
+        gen = self._scan_gen
+        cancelled = lambda: gen != self._scan_gen
         try:
-            rows, note = wifi_mod.scan_wifi()
-            msg = f"Wi-Fi: найдено BSSID: {len(rows)}" + (f" ({note})" if note else "")
-            self.q.put(("wifi", rows, msg))
+            rows, note = wifi_mod.scan_wifi(is_cancelled=cancelled)
+        except wifi_mod.ScanCancelled:
+            return  # Стоп уже завершил UI
         except Exception as e:
+            if gen != self._scan_gen:
+                return
             self.q.put(("wifi", [], f"Wi-Fi ошибка: {e}"))
+            return
+        if gen != self._scan_gen:
+            return
+        msg = f"Wi-Fi: найдено BSSID: {len(rows)}" + (f" ({note})" if note else "")
+        self.q.put(("wifi", rows, msg))
 
     def _job_bt(self):
+        gen = self._scan_gen
         try:
             rows, note = bt_mod.scan_classic(self._duration())
-            msg = f"Bluetooth: устройств: {len(rows)}" + (f". {note}" if note else "")
-            self.q.put(("bt", rows, msg))
         except Exception as e:
+            if gen != self._scan_gen:
+                return
             self.q.put(("bt", [], f"Bluetooth ошибка: {e}"))
+            return
+        if gen != self._scan_gen:
+            return
+        msg = f"Bluetooth: устройств: {len(rows)}" + (f". {note}" if note else "")
+        self.q.put(("bt", rows, msg))
 
     def _job_ble(self):
+        gen = self._scan_gen
         try:
             rows, note = ble_mod.scan_ble(self._duration(),
                                           on_update=lambda e: self.q.put(("ble_live", e)))
-            msg = f"BLE: устройств: {len(rows)}" + (f". {note}" if note else "")
-            self.q.put(("ble", rows, msg))
         except Exception as e:
+            if gen != self._scan_gen:
+                return
             self.q.put(("ble", [], f"BLE ошибка: {e}"))
+            return
+        if gen != self._scan_gen:
+            return
+        msg = f"BLE: устройств: {len(rows)}" + (f". {note}" if note else "")
+        self.q.put(("ble", rows, msg))
 
     def _filtered(self, key: str) -> list[dict]:
         rows = self.data.get(key, [])
