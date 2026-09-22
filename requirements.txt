@@ -1,4 +1,7 @@
 customtkinter==6.0.0
 bleak==3.0.2
 pillow==12.3.0
-pywinrt==3.2.1
+# WinRT-привязки (модуль winrt.* для BLE Proxy); пакета pywinrt на PyPI нет
+winrt-runtime==3.2.1; sys_platform == "win32"
+winrt-windows-devices-bluetooth-genericattributeprofile==3.2.1; sys_platform == "win32"
+winrt-windows-storage-streams==3.2.1; sys_platform == "win32"
