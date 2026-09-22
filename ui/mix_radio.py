@@ -202,6 +202,7 @@ class RadioTabMixin:
             self._update_stats(key, rows)
             self._draw_chart(key, rows)
 
+    @staticmethod
     def _row_tag(key: str, r: dict) -> tuple:
         """Теги строки: цвет по силе сигнала + подсветка подключения."""
         tags = []
@@ -222,6 +223,7 @@ class RadioTabMixin:
                 tags.append("connected")
         return tuple(tags)
 
+    @staticmethod
     def _cell(key: str, cid: str, v) -> str:
         if v is None or v == "":
             return "—"

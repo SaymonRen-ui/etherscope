@@ -40,6 +40,7 @@ class ClipMixin:
             return None
         return None
 
+    @staticmethod
     def _to_clipboard(widget, text: str) -> bool:
         try:
             widget.clipboard_clear()
