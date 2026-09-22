@@ -60,9 +60,6 @@ PHY (802.11n/ac/ax…), аутентификация, шифрование, ти
 `StartAdvertising` с параметрами connectable+discoverable — пустой вызов
 молча остаётся в CREATED.
 
-Запасные способы подсмотреть трафик (если мост неприменим):
-Android HCI snoop-лог + Wireshark (`btatt`), либо nRF52840-сниффер.
-
 ## Запуск
 
 ```bat
