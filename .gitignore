@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# PyInstaller
+build/
+dist/
+
+# IDE
+.vs/
+*.user
+
+# Локальные данные: чужой референс-проект, дампы трафика, доки
+incoming/
+*.log

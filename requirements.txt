@@ -1,0 +1,4 @@
+customtkinter==6.0.0
+bleak==3.0.2
+pillow==12.3.0
+pywinrt==3.2.1
