@@ -17,8 +17,8 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          # pywinrt не выпускает колёс под 3.14
-          python-version: "3.13"
+          # Потолок pywinrt — Python 3.12 (даже 6.x требует <3.13)
+          python-version: "3.12"
 
       - name: Install deps + PyInstaller
         run: pip install -r requirements.txt pyinstaller
